@@ -403,20 +403,13 @@ export const getPdfs = async (req, res) => {
 
 export const signupPatient = async (req, res) => {
   const { name, email, mobilenumber, password } = req.body;
-    const q = query(collection(firestore, 'patients'), where('email', '==', email));
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-      return res.status(400).json({ error: 'Email already exists' });
-    }
+
     const generatePatientId = () => `PT${Math.floor(1000000000 + Math.random() * 9000000000)}`;
     let patientId = generatePatientId();
     const existingIdQuery = query(collection(firestore, 'patients'), where('id', '==', patientId));
-    let idExists = !(await getDocs(existingIdQuery)).empty;
-    while ('idExists') {
-      patientId = generatePatientId();
-      idExists = !(await getDocs(query(collection(firestore, 'patients'), where('id', '==', patientId)))).empty;
-    }
+
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    console.log(userCredential)
     const patientRef = doc(collection(firestore, 'patients'));
     await setDoc(patientRef, { 
       id: patientId,
