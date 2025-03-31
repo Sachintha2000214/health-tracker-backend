@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getPdfs, getPatient, loginPatients, signupPatient, postBloodPressureData, uploadBloodPreessure, uploadBloodSugarPdf, postBloodSugarData, uploadLipidProfilePdf, postLipidProfileData, uploadFBCPdf, postFBCData } from "../controllers/patientController.js";
+import { getPdfs, getPatient, loginPatients, signupPatient, postBloodPressureData, uploadBloodPreessure, uploadBloodSugarPdf, postBloodSugarData, uploadLipidProfilePdf, postLipidProfileData, uploadFBCPdf, postFBCData, postBmiData } from "../controllers/patientController.js";
 import multer from "multer";
 const patientRouter = Router();
 
@@ -16,5 +16,6 @@ patientRouter.get("/files/bloodpressure", getPdfs);
 patientRouter.get('/:id', getPatient);
 patientRouter.post('/login', loginPatients);
 patientRouter.post('/signup', signupPatient);
+patientRouter.post("/bmi", postBmiData);
 
 export default patientRouter;
