@@ -488,3 +488,37 @@ export const getPatient = async (req, res) => {
         res.status(500).json({ error: "Failed to fetch patient details" });
     }
 };
+
+export const postBmiData = async (req, res) => {
+  try {
+    const { height, weight, bmi, userId } = req.body;
+
+    if (!height || !weight || !bmi || !userId) {
+      return res.status(400).json({ message: "Missing required fields: height, weight, bmi, or userId" });
+    }
+
+    const heightInMeters = height / 100;
+
+    if (isNaN(heightInMeters) || isNaN(weight) || heightInMeters <= 0 || weight <= 0) {
+      return res.status(400).json({ message: "Invalid height or weight" });
+    }
+
+    // Save to Firestore
+    const docRef = await db.collection("bmiRecords").add({
+      userId,
+      height, // already in cm
+      weight,
+      bmi,
+      date: new Date().toISOString(),
+    });
+
+    res.status(201).json({
+      message: "BMI data saved successfully!",
+      data: { userId, height, weight, bmi },
+      docId: docRef.id,
+    });
+  } catch (error) {
+    console.error("🚨 Error saving BMI data:", error);
+    res.status(500).json({ message: "Error saving BMI data", error: error.message });
+  }
+};
