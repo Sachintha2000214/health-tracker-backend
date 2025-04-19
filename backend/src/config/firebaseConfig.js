@@ -14,12 +14,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const serviceAccountPath = path.join(__dirname, '../../serviceAccountKey.json');
 const serviceAccount = JSON.parse(await readFile(serviceAccountPath, 'utf-8'));
 const firebaseConfig = {
-  apiKey: "AIzaSyBNjaHJtRjnEoviA3b1TSFft82pd9bZWSw",
-  authDomain: "health-tracker-d1568.firebaseapp.com",
-  projectId: "health-tracker-d1568",
-  storageBucket: "health-tracker-d1568.appspot.com", // ✅ Use correct storage bucket URL
-  messagingSenderId: "259246991702",
-  appId: "1:259246991702:web:1aab3ca7ec0bd55e47cef7"
+  apiKey: "AIzaSyC72CbpHIM67m_rWj6-b_FqEZTn31YEM38",
+  authDomain: "health-meal-tracker.firebaseapp.com",
+  projectId: "health-meal-tracker",
+  storageBucket: "health-meal-tracker.firebasestorage.app",
+  messagingSenderId: "925144812217",
+  appId: "1:925144812217:web:55e96c7cdfddf3222ba968",
+  measurementId: "G-RWK5MHLQJT"
 };
 
 const app = initializeApp(firebaseConfig);

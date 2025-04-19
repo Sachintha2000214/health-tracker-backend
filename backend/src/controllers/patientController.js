@@ -169,7 +169,7 @@ export const uploadBloodSugarPdf = async (req, res) => {
 export const postBloodSugarData = async (req, res) => {
   try {
     console.log(req.body)
-    const { type, value, userId } = req.body;
+    const { type, value, userId, docId } = req.body;
 
     if (!type || !value, !userId) {
       return res.status(400).json({ message: "All fields are required" });
@@ -180,6 +180,7 @@ export const postBloodSugarData = async (req, res) => {
       value: value,
       type: type,
       userId: userId,
+      doctorId: docId,
       date: new Date().toISOString(),
     });
 
@@ -625,7 +626,7 @@ export const getBloodSugarByPatient = async (req, res) => {
 
   try {
     const recordsRef = db.collection("bloodSugarReports");
-    const snapshot = await recordsRef.where('patientId', '==', id).get();
+    const snapshot = await recordsRef.where('userId', '==', id).get();
 
     if (snapshot.empty) {
       console.log('No matching records.');
