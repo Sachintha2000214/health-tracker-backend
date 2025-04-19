@@ -4,7 +4,10 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { collection, query, where, getDocs, doc, setDoc } from "firebase/firestore";
 import { getFirestore } from "firebase/firestore";
 import { createUserWithEmailAndPassword } from 'firebase/auth';
+import fs from 'fs';
 import { getDocument } from "pdfjs-dist";
+
+
 
 const upload = multer({ storage: multer.memoryStorage() });
 const firestore = getFirestore();
@@ -56,7 +59,9 @@ export const uploadBloodPreessure = async (req, res) => {
         systolic: bloodPressureData.systolic,
         diastolic: bloodPressureData.diastolic,
         pulse: bloodPressureData.pulse,
-        patientId: req.body.userId
+        patientId: req.body.userId,
+        doctorId: req.body.docId,
+        commented: false
       });
   
       console.log("✅ Data saved to Firestore with ID:", docRef.id);
@@ -91,7 +96,7 @@ function parseBloodPressureData(text) {
 
 export const postBloodPressureData = async (req, res) => {
     try {
-      const { systolic, diastolic, pulse, userId } = req.body;
+      const { systolic, diastolic, pulse, userId, docId} = req.body;
   
       if (!systolic || !diastolic || !pulse || !userId) {
         return res.status(400).json({ message: "All fields are required" });
@@ -103,6 +108,8 @@ export const postBloodPressureData = async (req, res) => {
         diastolic: parseInt(diastolic),
         pulse: parseInt(pulse),
         patientId: userId,
+        doctorId: docId,
+        commented: false,
         date: new Date().toISOString(),
       });
   
@@ -172,7 +179,8 @@ export const postBloodSugarData = async (req, res) => {
     const docRef = await db.collection("bloodSugarReports").add({
       value: value,
       type: type,
-      userId: userId
+      userId: userId,
+      date: new Date().toISOString(),
     });
 
     res.json({ message: "Manual data saved successfully!", id: docRef.id });
@@ -190,12 +198,15 @@ function parseBloodSugarData(text) {
   const postprandialMatch = text.match(/Postprandial Blood Sugar\s*(\d+)\s*mg\/dL/);
   const randomMatch = text.match(/Random Blood Sugar\s*(\d+)\s*mg\/dL/);
   const hbA1cMatch = text.match(/HbA1c\s*([\d\.]+)\s*%/);
+  const dateMatch = text.match(/(\d{4}-\d{2}-\d{2})/); // YYYY-MM-DD format
 
   // If matches are found, store them in the `data` object
   if (fastingMatch) data.fastingBloodSugar = fastingMatch[1];
   if (postprandialMatch) data.postprandialBloodSugar = postprandialMatch[1];
   if (randomMatch) data.randomBloodSugar = randomMatch[1];
   if (hbA1cMatch) data.hbA1c = hbA1cMatch[1];
+  if (dateMatch) data.date = dateMatch[1];
+
 
   // Return parsed data object
   return data;
@@ -204,6 +215,7 @@ function parseBloodSugarData(text) {
 export const uploadLipidProfilePdf = async (req, res) => {
   try {
     const userId = req.body.userId; // Ensure the user ID is passed
+    const doctorId = req.body.docId;
 
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
@@ -234,8 +246,9 @@ export const uploadLipidProfilePdf = async (req, res) => {
     // Save the extracted data to Firebase Firestore
     const docRef = await db.collection("lipidProfileReports").add({
       userId,
+      doctorId,
+      commented: false,
       ...lipidProfileData,
-      uploadedAt: new Date().toISOString(),
     });
 
     res.json({
@@ -252,7 +265,7 @@ export const uploadLipidProfilePdf = async (req, res) => {
 export const postLipidProfileData = async (req, res) => {
   try {
     console.log(req.body)
-    const { triglycerides, ldl, hdl, cholesterol, userId} = req.body;
+    const { triglycerides, ldl, hdl, cholesterol, userId, docId} = req.body;
 
     if (!cholesterol || !hdl, !ldl || !triglycerides || !userId) {
       return res.status(400).json({ message: "All fields are required" });
@@ -261,10 +274,13 @@ export const postLipidProfileData = async (req, res) => {
     // Save to Firestore
     const docRef = await db.collection("lipidProfileReports").add({
       patientId: userId,
+      doctorId: docId,
       cholesterol: cholesterol,
       hdl: hdl,
       ldl: ldl,
       triglycerides: triglycerides,
+      commented: false,
+      date: new Date().toISOString(),
     });
 
     res.json({ message: "Manual data saved successfully!", id: docRef.id });
@@ -281,12 +297,14 @@ function parseLipidProfileData(text) {
   const hdlMatch = text.match(/HDL\s*(\d+)\s*mg\/dL/);
   const ldlMatch = text.match(/LDL\s*(\d+)\s*mg\/dL/);
   const triglyceridesMatch = text.match(/Triglycerides\s*(\d+)\s*mg\/dL/);
+  const dateMatch = text.match(/(\d{4}-\d{2}-\d{2})/); 
 
   // If matches are found, store them in the `data` object
   if (cholesterolMatch) data.cholesterol = cholesterolMatch[1];
   if (hdlMatch) data.hdl = hdlMatch[1];
   if (ldlMatch) data.ldl = ldlMatch[1];
   if (triglyceridesMatch) data.triglycerides = triglyceridesMatch[1];
+  if (dateMatch) data.date = dateMatch[1];
 
   // Return parsed data object
   return data;
@@ -295,6 +313,7 @@ function parseLipidProfileData(text) {
 export const uploadFBCPdf = async (req, res) => {
   try {
     const userId = req.body.userId; // Ensure user ID is passed in the request
+    const doctorId = req.body.docId
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
     }
@@ -323,6 +342,8 @@ export const uploadFBCPdf = async (req, res) => {
     // Save the extracted data to Firestore
     const docRef = await db.collection("fbcReports").add({
       patientId:userId,
+      doctorId: doctorId,
+      commented: false,
       ...fbcData,
       uploadedAt: new Date().toISOString(),
     });
@@ -341,19 +362,22 @@ export const uploadFBCPdf = async (req, res) => {
 export const postFBCData = async (req, res) => {
   try {
     console.log(req.body)
-    const { platelet, hemoglobin, wbc, rbc, userId} = req.body;
+    const { platelet, haemoglobin, wbc, rbc, userId, docId} = req.body;
 
-    if (!platelet || !hemoglobin, !wbc || !rbc || !userId) {
+    if (!platelet || !haemoglobin, !wbc || !rbc || !userId) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
     // Save to Firestore
     const docRef = await db.collection("fbcReports").add({
       platelet: platelet,
-      hemoglobin: hemoglobin,
+      haemoglobin: haemoglobin,
       wbc: wbc,
       rbc: rbc,
       patientId: userId,
+      doctorId: docId,
+      commented: false,
+      date: new Date().toISOString(),
     });
 
     res.json({ message: "Manual data saved successfully!", id: docRef.id });
@@ -366,17 +390,19 @@ export const postFBCData = async (req, res) => {
 function parseFBCData(text) {
   const data = {};
 
-  // Extracting RBC, WBC, Hemoglobin, Platelet values using RegEx
+  // Extracting RBC, WBC, haemoglobin, Platelet values using RegEx
   const rbcMatch = text.match(/RBC:\s*(\d+(\.\d+)?)\s*million\/uL/);
   const wbcMatch = text.match(/WBC:\s*(\d+(\.\d+)?)\s*thousand\/uL/);
-  const hemoglobinMatch = text.match(/Hemoglobin:\s*(\d+(\.\d+)?)\s*g\/dL/);
+  const haemoglobinMatch = text.match(/haemoglobin:\s*(\d+(\.\d+)?)\s*g\/dL/);
   const plateletMatch = text.match(/Platelet:\s*(\d+(\.\d+)?)\s*thousand\/uL/);
+  const dateMatch = text.match(/(\d{4}-\d{2}-\d{2})/); 
 
   // Store values in the `data` object if matches are found
   if (rbcMatch) data.rbc = rbcMatch[1];
   if (wbcMatch) data.wbc = wbcMatch[1];
-  if (hemoglobinMatch) data.hemoglobin = hemoglobinMatch[1];
+  if (haemoglobinMatch) data.haemoglobin = haemoglobinMatch[1];
   if (plateletMatch) data.platelet = plateletMatch[1];
+  if (dateMatch) data.date = dateMatch[1];
 
   // Return parsed data object
   return data;
@@ -403,20 +429,24 @@ export const getPdfs = async (req, res) => {
 
 export const signupPatient = async (req, res) => {
   const { name, email, mobilenumber, password } = req.body;
+  console.log(req.body)
     const q = query(collection(firestore, 'patients'), where('email', '==', email));
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-      return res.status(400).json({ error: 'Email already exists' });
-    }
+    // const querySnapshot = await getDocs(q);
+    // if (!querySnapshot.empty) {
+    //   return res.status(400).json({ error: 'Email already exists' });
+    // }
     const generatePatientId = () => `PT${Math.floor(1000000000 + Math.random() * 9000000000)}`;
     let patientId = generatePatientId();
+    console.log(patientId)
     const existingIdQuery = query(collection(firestore, 'patients'), where('id', '==', patientId));
     let idExists = !(await getDocs(existingIdQuery)).empty;
-    while ('idExists') {
-      patientId = generatePatientId();
-      idExists = !(await getDocs(query(collection(firestore, 'patients'), where('id', '==', patientId)))).empty;
-    }
+    // while ('idExists') {
+    //   patientId = generatePatientId();
+    //   idExists = !(await getDocs(query(collection(firestore, 'patients'), where('id', '==', patientId)))).empty;
+    // }
+  
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    console.log(userCredential)
     const patientRef = doc(collection(firestore, 'patients'));
     await setDoc(patientRef, { 
       id: patientId,
@@ -468,7 +498,202 @@ export const loginPatients = async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 };
-  
+
+
+export const getBloodPressureByDoctor = async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const recordsRef = db.collection("bloodPressureRecords");
+    const snapshot = await recordsRef.where('doctorId', '==', id).get();
+
+    if (snapshot.empty) {
+      console.log('No matching records.');
+      return res.status(404).json({ message: 'No records found for this doctor' });
+    }
+
+    const records = [];
+    snapshot.forEach(doc => {
+      records.push({ id: doc.id, ...doc.data() });
+    });
+
+    return res.status(200).json(records);
+  } catch (error) {
+    console.error("Error fetching blood pressure records:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const getBloodSugarByDoctor = async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const recordsRef = db.collection("bloodSugarReports");
+    const snapshot = await recordsRef.where('doctorId', '==', id).get();
+
+    if (snapshot.empty) {
+      console.log('No matching records.');
+      return res.status(404).json({ message: 'No records found for this doctor' });
+    }
+
+    const records = [];
+    snapshot.forEach(doc => {
+      records.push({ id: doc.id, ...doc.data() });
+    });
+
+    return res.status(200).json(records);
+  } catch (error) {
+    console.error("Error fetching blood pressure records:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const getFBCByDoctor = async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const recordsRef = db.collection("fbcReports");
+    const snapshot = await recordsRef.where('doctorId', '==', id).get();
+
+    if (snapshot.empty) {
+      console.log('No matching records.');
+      return res.status(404).json({ message: 'No records found for this doctor' });
+    }
+
+    const records = [];
+    snapshot.forEach(doc => {
+      records.push({ id: doc.id, ...doc.data() });
+    });
+
+    return res.status(200).json(records);
+  } catch (error) {
+    console.error("Error fetching blood pressure records:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const getLipidProfileByDoctor = async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const recordsRef = db.collection("lipidProfileReports");
+    const snapshot = await recordsRef.where('doctorId', '==', id).get();
+
+    if (snapshot.empty) {
+      console.log('No matching records.');
+      return res.status(404).json({ message: 'No records found for this doctor' });
+    }
+
+    const records = [];
+    snapshot.forEach(doc => {
+      records.push({ id: doc.id, ...doc.data() });
+    });
+
+    return res.status(200).json(records);
+  } catch (error) {
+    console.error("Error fetching blood pressure records:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const getBloodPressureByPatient = async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const recordsRef = db.collection("bloodPressureRecords");
+    const snapshot = await recordsRef.where('patientId', '==', id).get();
+
+    if (snapshot.empty) {
+      console.log('No matching records.');
+      return res.status(404).json({ message: 'No records found for this doctor' });
+    }
+
+    const records = [];
+    snapshot.forEach(doc => {
+      records.push({ id: doc.id, ...doc.data() });
+    });
+
+    return res.status(200).json(records);
+  } catch (error) {
+    console.error("Error fetching blood pressure records:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const getBloodSugarByPatient = async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const recordsRef = db.collection("bloodSugarReports");
+    const snapshot = await recordsRef.where('patientId', '==', id).get();
+
+    if (snapshot.empty) {
+      console.log('No matching records.');
+      return res.status(404).json({ message: 'No records found for this doctor' });
+    }
+
+    const records = [];
+    snapshot.forEach(doc => {
+      records.push({ id: doc.id, ...doc.data() });
+    });
+
+    return res.status(200).json(records);
+  } catch (error) {
+    console.error("Error fetching blood pressure records:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const getFBCByPatient = async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const recordsRef = db.collection("fbcReports");
+    const snapshot = await recordsRef.where('patientId', '==', id).get();
+
+    if (snapshot.empty) {
+      console.log('No matching records.');
+      return res.status(404).json({ message: 'No records found for this doctor' });
+    }
+
+    const records = [];
+    snapshot.forEach(doc => {
+      records.push({ id: doc.id, ...doc.data() });
+    });
+
+    return res.status(200).json(records);
+  } catch (error) {
+    console.error("Error fetching blood pressure records:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const getLipidProfileByPatient = async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const recordsRef = db.collection("lipidProfileReports");
+    const snapshot = await recordsRef.where('patientId', '==', id).get();
+
+    if (snapshot.empty) {
+      console.log('No matching records.');
+      return res.status(404).json({ message: 'No records found for this doctor' });
+    }
+
+    const records = [];
+    snapshot.forEach(doc => {
+      records.push({ id: doc.id, ...doc.data() });
+    });
+
+    return res.status(200).json(records);
+  } catch (error) {
+    console.error("Error fetching blood pressure records:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+
+
 export const getPatient = async (req, res) => {
     const { id } = req.params;
 
@@ -487,4 +712,202 @@ export const getPatient = async (req, res) => {
         console.error("Error fetching patient details:", error);
         res.status(500).json({ error: "Failed to fetch patient details" });
     }
+};
+
+export const postBmiData = async (req, res) => {
+  try {
+    const { height, weight, bmi, userId } = req.body;
+
+    if (!height || !weight || !bmi || !userId) {
+      return res.status(400).json({ message: "Missing required fields: height, weight, bmi, or userId" });
+    }
+
+    const heightInMeters = height / 100;
+
+    if (isNaN(heightInMeters) || isNaN(weight) || heightInMeters <= 0 || weight <= 0) {
+      return res.status(400).json({ message: "Invalid height or weight" });
+    }
+
+    // Save to Firestore
+    const docRef = await db.collection("bmiRecords").add({
+      userId,
+      height, // already in cm
+      weight,
+      bmi,
+      date: new Date().toISOString(),
+    });
+
+    res.status(201).json({
+      message: "BMI data saved successfully!",
+      data: { userId, height, weight, bmi },
+      docId: docRef.id,
+    });
+  } catch (error) {
+    console.error("🚨 Error saving BMI data:", error);
+    res.status(500).json({ message: "Error saving BMI data", error: error.message });
+  }
+};
+
+let calorieData;
+try {
+    calorieData = JSON.parse(fs.readFileSync('calories.json', 'utf8'));
+} catch (error) {
+    console.error("Error reading calories.json:", error.message);
+    process.exit(1);
+}
+
+const flattenMeals = (data, prefix = "") => {
+  let meals = {};
+  for (const key in data) {
+    if (typeof data[key] === "object") {
+      Object.assign(meals, flattenMeals(data[key], `${prefix}${key} > `));
+    } else {
+      meals[`${prefix}${key}`] = data[key];
+    }
+  }
+  return meals;
+};
+
+const flattenedCalorieData = flattenMeals(calorieData);
+
+export const getMealData = async(req,res) => {
+  try {
+    res.status(200).json(flattenedCalorieData);
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: "Failed to fetch meals" });
+  }
+};
+
+export const calculateMealCalories = (req, res) => {
+  const { meals } = req.body;
+  if (!meals || !Array.isArray(meals)) {
+    return res.status(400).json({ error: "Invalid meal selection" });
+  }
+
+  let totalCalories = 0;
+  meals.forEach(({ meal, quantity }) => {
+    if (flattenedCalorieData[meal]) {
+      totalCalories += (flattenedCalorieData[meal] / 100) * quantity;
+    }
+  });
+
+  res.json({ totalCalories });
+}
+
+
+export const calculateDayCalories = (req, res) => {
+  const { dayMeals } = req.body;
+  if (!dayMeals) {
+    return res.status(400).json({ error: "Invalid meal selection" });
+  }
+
+  let dailyCalories = 0;
+  Object.values(dayMeals).forEach(mealTime => {
+    mealTime.forEach(({ meal, quantity }) => {
+      if (flattenedCalorieData[meal]) {
+        dailyCalories += (flattenedCalorieData[meal] / 100) * quantity;
+      }
+    });
+  });
+
+  res.json({ dailyCalories });
+}
+
+// patientController.js
+
+export const updateDoctorCommentInBloodPressureRecords = async (req, res) => {
+  try {
+    const { docId } = req.params;
+    const { comment } = req.body;
+
+    const recordRef = db.collection("bloodPressureRecords").doc(docId);
+    const record = await recordRef.get();
+
+    if (!record.exists) {
+      return res.status(404).json({ message: "Record not found" });
+    }
+
+    await recordRef.update({
+      doctorComment: comment,
+      commented: true,
+    });
+
+    return res.status(200).json({ message: "Comment added successfully." });
+  } catch (err) {
+    console.error("Error updating comment:", err);
+    return res.status(500).json({ message: "Server error." });
+  }
+};
+
+export const updateDoctorCommentInBloodSugarRecords = async (req, res) => {
+  try {
+    const { docId } = req.params;
+    const { comment } = req.body;
+
+    const recordRef = db.collection("bloodSugarReports").doc(docId);
+    const record = await recordRef.get();
+
+    if (!record.exists) {
+      return res.status(404).json({ message: "Record not found" });
+    }
+
+    await recordRef.update({
+      doctorComment: comment,
+      commented: true,
+    });
+
+    return res.status(200).json({ message: "Comment added successfully." });
+  } catch (err) {
+    console.error("Error updating comment:", err);
+    return res.status(500).json({ message: "Server error." });
+  }
+};
+
+export const updateDoctorCommentInLipidRecords = async (req, res) => {
+  try {
+    const { docId } = req.params;
+    const { comment } = req.body;
+
+    const recordRef = db.collection("lipidProfileReports").doc(docId);
+    const record = await recordRef.get();
+
+    if (!record.exists) {
+      return res.status(404).json({ message: "Record not found" });
+    }
+
+    await recordRef.update({
+      doctorComment: comment,
+      commented: true,
+    });
+
+    return res.status(200).json({ message: "Comment added successfully." });
+  } catch (err) {
+    console.error("Error updating comment:", err);
+    return res.status(500).json({ message: "Server error." });
+  }
+};
+
+export const updateDoctorCommentInFBCRecords = async (req, res) => {
+  try {
+    const { docId } = req.params;
+    const { comment } = req.body;
+
+    const recordRef = db.collection("fbcReports").doc(docId);
+    const record = await recordRef.get();
+
+    if (!record.exists) {
+      return res.status(404).json({ message: "Record not found" });
+    }
+
+    await recordRef.update({
+      doctorComment: comment,
+      commented: true,
+    });
+
+    return res.status(200).json({ message: "Comment added successfully." });
+  } catch (err) {
+    console.error("Error updating comment:", err);
+    return res.status(500).json({ message: "Server error." });
+  }
 };

@@ -11,7 +11,7 @@ export const loginDoctor = async (req, res) => {
     try {
 const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const token = await userCredential.user.getIdToken();
-    const doctorRef = db.collection("doctors");
+    const doctorRef = collection(firestore,"doctors");
     const docSnapshot = await getDocs(query(doctorRef, where('email', '==', email)));
         if (docSnapshot.empty) {
             return res.status(400).json({ error: "Doctor not found in the database" });
@@ -33,7 +33,7 @@ const userCredential = await signInWithEmailAndPassword(auth, email, password);
 };
 
 export const signupDoctor = async (req, res) => {
-    const { name, email, doctornumber, mobilenumber, password } = req.body;
+    const { name, email, doctornumber, mobilenumber, specialization, password } = req.body;
 
     try {
         // Check if the email is already in use
@@ -56,16 +56,41 @@ export const signupDoctor = async (req, res) => {
             name,
             email,
             doctornumber,
-            mobilenumber
+            mobilenumber,
+            specialization
         });
 
         res.status(201).json({
             user: userRecord,
-            doctor: { name, email, doctornumber, mobilenumber, uid: userRecord.uid },
+            doctor: { name, email, doctornumber, mobilenumber, uid: userRecord.uid, specialization },
         });
 
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
 };
+
+export const getAllDoctors = async (req, res) => {
+    try {
+      const doctorRef = collection(firestore, "doctors");
+      const docSnapshot = await getDocs(query(doctorRef));
+      const doctors = [];
+      
+      docSnapshot.forEach(doc => {
+        const data = doc.data();
+        doctors.push({
+          doctorNumber: data.doctornumber,
+          name: data.name,
+          email: data.email,
+          mobileNumber: data.mobilenumber,
+          specialization: data.specialization
+        });
+      });
+      
+      return res.status(200).json(doctors);
+    } catch (error) {
+      console.error("Error getting all doctors:", error);
+      return res.status(500).json({ error: "Failed to fetch doctors" });
+    }
+  }
 
