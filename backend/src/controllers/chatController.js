@@ -26,4 +26,32 @@ export const sendMessage = async (req, res) => {
   }
 };
 
+// Get messages between two users
+export const getMessages = async (req, res) => {
+  try {
+    const { doctorId, patientId } = req.query;
 
+    if (!doctorId || !patientId) {
+      return res.status(400).json({ success: false, error: "Missing doctorId or patientId" });
+    }
+
+    const sentMessages = await db.collection("messages")
+      .where("senderId", "==", doctorId)
+      .where("receiverId", "==", patientId)
+      .get();
+
+    const receivedMessages = await db.collection("messages")
+      .where("senderId", "==", patientId)
+      .where("receiverId", "==", doctorId)
+      .get();
+
+    const messages = [
+      ...sentMessages.docs.map(doc => doc.data()),
+      ...receivedMessages.docs.map(doc => doc.data())
+    ].sort((a, b) => a.timestamp - b.timestamp);
+
+    res.status(200).json({ success: true, messages });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
