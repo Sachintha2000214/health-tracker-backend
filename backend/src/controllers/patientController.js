@@ -151,8 +151,7 @@ export const uploadBloodSugarPdf = async (req, res) => {
 
     // Save the extracted data to Firebase Firestore
     const docRef = await db.collection("bloodSugarReports").add({
-      patientId:userId,
-      doctorId: req.body.docId,
+      userId,
       ...bloodSugarData,
     });
 
@@ -170,7 +169,7 @@ export const uploadBloodSugarPdf = async (req, res) => {
 export const postBloodSugarData = async (req, res) => {
   try {
     console.log(req.body)
-    const { type, value, userId, docId } = req.body;
+    const { type, value, userId } = req.body;
 
     if (!type || !value, !userId) {
       return res.status(400).json({ message: "All fields are required" });
@@ -180,8 +179,7 @@ export const postBloodSugarData = async (req, res) => {
     const docRef = await db.collection("bloodSugarReports").add({
       value: value,
       type: type,
-      patientId: userId,
-      doctorId: docId,
+      userId: userId,
       date: new Date().toISOString(),
     });
 
@@ -195,28 +193,24 @@ export const postBloodSugarData = async (req, res) => {
 function parseBloodSugarData(text) {
   const data = {};
 
-  // Extract date (format: YYYY.MM.DD)
-  const dateMatch = text.match(/Date:\s*([\d\.]+)/);
+  // Extracting each Blood Sugar type and value using RegEx
+  const fastingMatch = text.match(/Fasting Blood Sugar\s*(\d+)\s*mg\/dL/);
+  const postprandialMatch = text.match(/Postprandial Blood Sugar\s*(\d+)\s*mg\/dL/);
+  const randomMatch = text.match(/Random Blood Sugar\s*(\d+)\s*mg\/dL/);
+  const hbA1cMatch = text.match(/HbA1c\s*([\d\.]+)\s*%/);
+  const dateMatch = text.match(/(\d{4}-\d{2}-\d{2})/); // YYYY-MM-DD format
+
+  // If matches are found, store them in the `data` object
+  if (fastingMatch) data.fastingBloodSugar = fastingMatch[1];
+  if (postprandialMatch) data.postprandialBloodSugar = postprandialMatch[1];
+  if (randomMatch) data.randomBloodSugar = randomMatch[1];
+  if (hbA1cMatch) data.hbA1c = hbA1cMatch[1];
   if (dateMatch) data.date = dateMatch[1];
 
-  // Extract blood sugar type
-  const typeMatch = text.match(/Blood Sugar Type:\s*([^]+?)(?=Value:|$)/);
-  if (typeMatch) data.type = typeMatch[1].trim();
 
-  // Determine how to extract the value based on the type
-  if (data.type && /HbA1c/i.test(data.type)) {
-    // Extract percentage value for HbA1c
-    const valueMatch = text.match(/Value:\s*([\d\.]+)\s*%/);
-    if (valueMatch) data.value = parseFloat(valueMatch[1]);
-  } else {
-    // Extract mg/dL value for other types
-    const valueMatch = text.match(/Value:\s*(\d+)\s*mg\/dL/);
-    if (valueMatch) data.value = parseInt(valueMatch[1]);
-  }
-
+  // Return parsed data object
   return data;
-}
-  
+}  
 
 export const uploadLipidProfilePdf = async (req, res) => {
   try {
@@ -251,7 +245,7 @@ export const uploadLipidProfilePdf = async (req, res) => {
 
     // Save the extracted data to Firebase Firestore
     const docRef = await db.collection("lipidProfileReports").add({
-      patientId:userId,
+      userId,
       doctorId,
       commented: false,
       ...lipidProfileData,
@@ -399,9 +393,9 @@ function parseFBCData(text) {
   // Extracting RBC, WBC, haemoglobin, Platelet values using RegEx
   const rbcMatch = text.match(/RBC:\s*(\d+(\.\d+)?)\s*million\/uL/);
   const wbcMatch = text.match(/WBC:\s*(\d+(\.\d+)?)\s*thousand\/uL/);
-  const haemoglobinMatch = text.match(/Haemoglobin:\s*(\d+(\.\d+)?)\s*g\/dL/);
+  const haemoglobinMatch = text.match(/haemoglobin:\s*(\d+(\.\d+)?)\s*g\/dL/);
   const plateletMatch = text.match(/Platelet:\s*(\d+(\.\d+)?)\s*thousand\/uL/);
-  const dateMatch = text.match(/(\d{4}.\d{2}.\d{2})/); 
+  const dateMatch = text.match(/(\d{4}-\d{2}-\d{2})/); 
 
   // Store values in the `data` object if matches are found
   if (rbcMatch) data.rbc = rbcMatch[1];

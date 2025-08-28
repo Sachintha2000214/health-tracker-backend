@@ -1,42 +1,16 @@
 import express from 'express';
 import cors from 'cors';
-import { createServer } from 'http';      // ✅ needed for socket.io
-import { Server } from 'socket.io';       // ✅ socket.io
-import { PORT } from './config.js';
+import { PORT} from './config.js';
 import patientRouter from './src/routes/patientRoutes.js';
 import doctorRouter from './src/routes/doctorRoutes.js';
-import chatRouter from './src/routes/chatRoutes.js';
-
 const app = express();
-const server = createServer(app);         // ✅ create HTTP server
-const io = new Server(server, { cors: { origin: "*" } }); // ✅ init socket.io
-
 const apiRouter = express.Router();
-
 // Middleware
 app.use(cors());
 app.use(express.json());
-
 app.use('/api', apiRouter);
 apiRouter.use('/patient', patientRouter);
-apiRouter.use('/doctor', doctorRouter);
-apiRouter.use('/chat', chatRouter);
-
-io.on("connection", (socket) => {
-  console.log("User connected:", socket.id);
-
-  socket.on("sendMessage", (msg) => {
-    console.log("New socket message:", msg);
-    // optional: call chatController.sendMessage(msg) here to save
-    socket.broadcast.emit("receiveMessage", msg);
-    
-  });
-
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
-  });
-});
-
-server.listen(PORT, () => {
+apiRouter.use('/doctor',doctorRouter);
+app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
