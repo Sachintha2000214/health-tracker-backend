@@ -9,7 +9,7 @@ import chatRouter from './src/routes/chatRoutes.js';
 
 const app = express();
 const server = createServer(app);         // ✅ create HTTP server
-
+// const io = new Server(server, { cors: { origin: "*" } }); // ✅ init socket.io
 
 const apiRouter = express.Router();
 
@@ -47,4 +47,5 @@ io.on("connection", (socket) => {
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
 

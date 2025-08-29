@@ -1,35 +1,60 @@
+// config/firebaseConfig.js — works on Vercel + local
 import admin from 'firebase-admin';
-import { initializeApp } from "firebase/app";
-import { getStorage } from "firebase/storage"; // Used for client-side interactions
-import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
-import { readFile } from 'fs/promises';
+import { readFileSync, existsSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Convert `import.meta.url` to __dirname equivalent
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Read service account key file dynamically
-const serviceAccountPath = path.join(__dirname, '../../serviceAccountKey.json');
-const serviceAccount = JSON.parse(await readFile(serviceAccountPath, 'utf-8'));
-const firebaseConfig = {
-  apiKey: "AIzaSyBNjaHJtRjnEoviA3b1TSFft82pd9bZWSw",
-  authDomain: "health-tracker-d1568.firebaseapp.com",
-  projectId: "health-tracker-d1568",
-  storageBucket: "health-tracker-d1568.appspot.com", // ✅ Use correct storage bucket URL
-  messagingSenderId: "259246991702",
-  appId: "1:259246991702:web:1aab3ca7ec0bd55e47cef7"
-};
+function fromEnv() {
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  let privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
-const app = initializeApp(firebaseConfig);
+  if (!projectId || !clientEmail || !privateKey) return null;
 
-// Initialize Firebase Admin (For Server SDK - Required for Bucket Access)
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  storageBucket: firebaseConfig.storageBucket
-});
-export const storage = getStorage(app);
-export const auth = getAuth(app);
-export const bucket = admin.storage().bucket();
+  // Vercel/CI usually store private key with literal \n
+  if (privateKey.includes('\\n')) privateKey = privateKey.replace(/\\n/g, '\n');
+
+  console.log('[firebase] Using ENV credentials for project:', projectId);
+  return { credential: admin.credential.cert({ projectId, clientEmail, privateKey }), projectId };
+}
+
+function fromFile() {
+  // Local fallback (adjust if you keep the JSON elsewhere)
+  const saPath =
+    process.env.FIREBASE_SA_PATH ||
+    path.join(process.cwd(), 'serviceAccountKey.json'); // project root
+
+  if (!existsSync(saPath)) return null;
+
+  const sa = JSON.parse(readFileSync(saPath, 'utf-8'));
+  if (!sa.private_key || !sa.client_email || !sa.project_id) {
+    throw new Error('[firebase] Invalid serviceAccount JSON (missing fields).');
+  }
+  console.log('[firebase] Using FILE credentials:', sa.client_email, 'project:', sa.project_id);
+  return { credential: admin.credential.cert(sa), projectId: sa.project_id };
+}
+
+const picked = fromEnv() || fromFile();
+if (!picked) {
+  throw new Error('[firebase] No credentials found. Set ENV on Vercel or FIREBASE_SA_PATH locally.');
+}
+
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: picked.credential,
+    projectId: picked.projectId,
+    storageBucket: `${picked.projectId}.appspot.com`,
+  });
+}
+
 export const db = admin.firestore();
+export const auth = admin.auth();
+export const bucket = admin.storage().bucket();
+
+// Call this once at startup to fail fast if creds are wrong
+export async function assertFirestoreReady() {
+  await db.listCollections(); // forces token mint; throws if invalid_grant/unauth
+  console.log('[firebase] Firestore auth OK');
+}
