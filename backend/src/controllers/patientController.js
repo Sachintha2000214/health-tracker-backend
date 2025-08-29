@@ -2,14 +2,7 @@
 import { db, auth } from "../config/firebaseConfig.js";
 import multer from "multer";
 import fs from "fs";
-import pdfjs from "pdfjs-dist/legacy/build/pdf.js";
-import path from "path";
-import { fileURLToPath } from "url";
-import { readFile } from 'fs/promises';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-const { getDocument } = pdfjs;
+import { getDocument } from "pdfjs-dist";
 
 // 🚫 Removed all Web SDK imports like:
 //   - signInWithEmailAndPassword, createUserWithEmailAndPassword
@@ -589,9 +582,7 @@ export const postBmiData = async (req, res) => {
 
 let calorieData;
 try {
-   calorieData = JSON.parse(
-    await readFile(path.join(__dirname, '../../calories.json'), 'utf-8')
-  );
+  calorieData = JSON.parse(fs.readFileSync("calories.json", "utf8"));
 } catch (error) {
   console.error("Error reading calories.json:", error.message);
   process.exit(1);
