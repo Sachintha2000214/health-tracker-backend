@@ -2,7 +2,7 @@
 import { db, auth } from "../config/firebaseConfig.js";
 import multer from "multer";
 import fs from "fs";
-import { getDocument } from "pdfjs-dist";
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.js";
 
 // 🚫 Removed all Web SDK imports like:
 //   - signInWithEmailAndPassword, createUserWithEmailAndPassword
