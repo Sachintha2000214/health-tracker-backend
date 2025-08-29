@@ -5,7 +5,10 @@ import { collection, query, where, getDocs, doc, setDoc } from "firebase/firesto
 import { getFirestore } from "firebase/firestore";
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import fs from 'fs';
-import { getDocument } from "pdfjs-dist/legacy/build/pdf.js";
+import pdfjs from "pdfjs-dist/legacy/build/pdf.js";
+
+const { getDocument } = pdfjs;
+
 
 
 
