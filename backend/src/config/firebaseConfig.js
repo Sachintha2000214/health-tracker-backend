@@ -14,13 +14,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const serviceAccountPath = path.join(__dirname, '../../serviceAccountKey.json');
 const serviceAccount = JSON.parse(await readFile(serviceAccountPath, 'utf-8'));
 const firebaseConfig = {
-  apiKey: "AIzaSyC72CbpHIM67m_rWj6-b_FqEZTn31YEM38",
-  authDomain: "health-meal-tracker.firebaseapp.com",
-  projectId: "health-meal-tracker",
-  storageBucket: "health-meal-tracker.firebasestorage.app",
-  messagingSenderId: "925144812217",
-  appId: "1:925144812217:web:55e96c7cdfddf3222ba968",
-  measurementId: "G-RWK5MHLQJT"
+  apiKey: "AIzaSyDPv_zn9htolezldHejWdH-0QB_Ruj8obI",
+  authDomain: "smart-health-tracker-a9dcb.firebaseapp.com",
+  projectId: "smart-health-tracker-a9dcb",
+  storageBucket: "smart-health-tracker-a9dcb.firebasestorage.app",
+  messagingSenderId: "146490072121",
+  appId: "1:146490072121:web:cc8855e59cf81851ba81e8",
+  measurementId: "G-790080CTZM"
 };
 
 const app = initializeApp(firebaseConfig);
