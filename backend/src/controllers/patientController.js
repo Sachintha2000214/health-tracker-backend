@@ -3,6 +3,8 @@ import { db, auth } from "../config/firebaseConfig.js";
 import multer from "multer";
 import fs from "fs";
 import pdfjs from "pdfjs-dist/legacy/build/pdf.js";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const { getDocument } = pdfjs;
 
