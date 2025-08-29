@@ -6,11 +6,10 @@ import { getFirestore } from "firebase/firestore";
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import fs from 'fs';
 import pdfjs from "pdfjs-dist/legacy/build/pdf.js";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const { getDocument } = pdfjs;
-
-
-
 
 const upload = multer({ storage: multer.memoryStorage() });
 const firestore = getFirestore();
@@ -759,7 +758,11 @@ export const postBmiData = async (req, res) => {
 
 let calorieData;
 try {
-    calorieData = JSON.parse(fs.readFileSync('calories.json', 'utf8'));
+// Recreate __dirname for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const filePath = path.join(__dirname, "../calories.json");
+const calorieData = JSON.parse(fs.readFileSync(filePath, "utf8"));
 } catch (error) {
     console.error("Error reading calories.json:", error.message);
     process.exit(1);
