@@ -587,7 +587,7 @@ export const postBmiData = async (req, res) => {
 let calorieData;
 try {
   calorieData = JSON.parse(
-    await readFile(path.join(__dirname, '../../calories.json'), 'utf-8')
+    await readFile(path.join(__dirname, '../../calories.json'), 'utf-8'))
 } catch (error) {
   console.error("Error reading calories.json:", error.message);
   process.exit(1);
